@@ -1,0 +1,56 @@
+version: '3.1'
+services:
+  web:
+    image: lhhung/nginx:test
+    build: ./nginx
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    profiles: ['production']
+  app:
+    image: lhhung/flask:compose
+    build: ./flask-project
+    restart: always
+    env_file:
+      - app.env
+    ports:
+      - "8000:8000"
+    command: gunicorn -b 0.0.0.0:8000 app:app
+    profiles: ['production', 'testing']
+  app-debug:
+    image: lhhung/flask:test
+    build: ./flask-project
+    restart: always
+    volumes: 
+      - "./flask-project:/local"
+    ports:
+      - "80:5000"
+    command: python3 /local/app.py
+    profiles: ['debug']
+  db:
+    image: postgres:10
+    restart: always
+    environment:
+      POSTGRES_USER: lhhung
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pglogindb
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./postgres_data:/var/lib/postgresql/data"
+    profiles: ['production','debug', 'testing']
+  test:    
+    image: lhhung/nginx:test
+    build: ./nginx
+    volumes:
+      - ./tests:/app/tests
+    command: service nginx start && sleep 5 && /app/tests/testEndpoints.sh
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+      - db
+    profiles: ["testing"]

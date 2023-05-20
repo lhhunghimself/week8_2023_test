@@ -1,0 +1,33 @@
+name: DockerHub CI
+on:
+  push:
+    branches:
+      - master
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Create env file
+              run: |
+                    echo "GITHUB_OAUTH_CLIENT_ID=${{ secrets.OAUTH_CLIENT_ID }}"> app.env
+                    echo "GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.OAUTH_CLIENT_SECRET}}" >> app.env
+                    
+            - name: Run tests
+              run: ./runTest.sh
+              if: success()
+
+            - name: Build images
+              run: docker-compose --profile production build 
+              if: success()
+
+            - name: Login to Docker Hub
+              run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+              if: success()          
+
+            - name: Push images
+              run: |
+                docker push lhhung/nginx:test
+                docker push lhhung/flask:compose
+
